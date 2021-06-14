@@ -23,8 +23,9 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
     private int currentQuestion = 1;
     List<Questions> questions;
-    private int correct_score = 0;
-    private int wrong_score = 0;
+    private double total_score = 0.0;
+    double high_score;
+
 
     @SuppressLint("DefaultLocale")
     @Override
@@ -33,12 +34,15 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
+
+
+
+
     questions = new Repository().getQuestion(questionsArrayList -> {
 
                 binding.questionTextView.setText(questionsArrayList.get(currentQuestion).getAnswer());
                 updateQuestionCounter();
                 getHighestScore();
-
             }
       );
 
@@ -48,12 +52,14 @@ public class MainActivity extends AppCompatActivity {
             binding.falseButton.setEnabled(false);
             updateQuestion();
 
+
         });
         binding.falseButton.setOnClickListener(view -> {
             checkAnswer(false);
             binding.trueButton.setEnabled(false);
             binding.falseButton.setEnabled(false);
             updateQuestion();
+
 
 
         });
@@ -66,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         });
+
     }
 
     @SuppressLint("DefaultLocale")
@@ -88,21 +95,24 @@ public class MainActivity extends AppCompatActivity {
 
         if(userChoice == answerIs){
             snackMessageId = R.string.correct_answer;
-            correct_score++;
+            total_score++;
             correctScoreAnimation();
-            setHighestScore();
-
            alphaAnimation();
         }else{
             snackMessageId = R.string.incorrect_answer;
-            wrong_score++;
+            if(total_score>0) {
+                total_score = (total_score - 0.5);
+            }else{
+                total_score = 0.0;
+            }
             wrongScoreAnimation();
            shakeAnimation();
 
+
         }
 
-        binding.correctAnswerTextView.setText(String.format("Correct Answer\n%d", correct_score));
-        binding.wrongAnswerTextView.setText(String.format("Wrong Answer\n%d", wrong_score));
+        setHighestScore();
+        binding.totalScoreTextView.setText("Total Score\n"+ total_score);
         Snackbar.make(binding.cardView,snackMessageId,Snackbar.LENGTH_SHORT).show();
 
     }
@@ -148,25 +158,63 @@ public class MainActivity extends AppCompatActivity {
     }
     private void correctScoreAnimation(){
         Animation scoreAnimation = AnimationUtils.loadAnimation(this,R.anim.alpha_score_animation);
-        binding.correctAnswerTextView.setAnimation(scoreAnimation);
+        binding.totalScoreTextView.setAnimation(scoreAnimation);
+        scoreAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                binding.totalScoreTextView.setTextColor(Color.GREEN);
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                binding.totalScoreTextView.setTextColor(Color.WHITE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
     }
     private void wrongScoreAnimation(){
         Animation scoreAnimation = AnimationUtils.loadAnimation(this,R.anim.alpha_score_animation);
-        binding.wrongAnswerTextView.setAnimation(scoreAnimation);
+        binding.totalScoreTextView.setAnimation(scoreAnimation);
+        scoreAnimation.setAnimationListener(new Animation.AnimationListener() {
+            @Override
+            public void onAnimationStart(Animation animation) {
+                binding.totalScoreTextView.setTextColor(Color.RED);
+            }
+
+            @Override
+            public void onAnimationEnd(Animation animation) {
+                binding.totalScoreTextView.setTextColor(Color.WHITE);
+            }
+
+            @Override
+            public void onAnimationRepeat(Animation animation) {
+
+            }
+        });
+
     }
     private void setHighestScore(){
-        String highestScore = String.valueOf(correct_score);
-        SharedPreferences sharedPreferences = getSharedPreferences(MESSAGE_ID,MODE_PRIVATE);
+        if(total_score > high_score){
+            binding.highestScoreTextView.setText(String.format("New Highest Score : %s", total_score));
+        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         @SuppressLint("CommitPrefEdits") SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putString("score",highestScore);
+        editor.putFloat("getScore", (float) total_score);
         editor.apply();
+        }
     }
     private void getHighestScore(){
-        SharedPreferences sharedPreferences = getSharedPreferences(MESSAGE_ID,MODE_PRIVATE);
-       String score =  sharedPreferences.getString("score","Last Highest Score : 0");
-       binding.highestScoreTextView.setText(String.format("Last Highest Score : %s", score));
+        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
+        high_score = sharedPreferences.getFloat("getScore",0.0f);
+        if(total_score >high_score) {
+            binding.highestScoreTextView.setText(String.format("New Highest Score : %s", high_score));
+        }else{
+            binding.highestScoreTextView.setText(String.format("Highest Score : %s", high_score));
+        }
     }
-
 
 
 
