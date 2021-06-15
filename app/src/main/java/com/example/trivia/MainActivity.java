@@ -34,48 +34,54 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
-
-
-
-
+        //Getting our questions and answer from Repository.
     questions = new Repository().getQuestion(questionsArrayList -> {
-
+                //setting current question to question text_view.
                 binding.questionTextView.setText(questionsArrayList.get(currentQuestion).getAnswer());
+                //Calling new Question
                 updateQuestionCounter();
+                //Invoking new High Score.
                 getHighestScore();
             }
       );
 
+        //setting true button onclick listener.
         binding.trueButton.setOnClickListener(view -> {
+            //Putting user's answer.
             checkAnswer(true);
+            //Disabling click listener of true and false button;
             binding.trueButton.setEnabled(false);
             binding.falseButton.setEnabled(false);
             updateQuestion();
 
-
         });
+        //setting false button onclick listener.
         binding.falseButton.setOnClickListener(view -> {
+            //Putting user's answer.
             checkAnswer(false);
+            //Disabling click listener of true and false button;
             binding.trueButton.setEnabled(false);
             binding.falseButton.setEnabled(false);
             updateQuestion();
 
-
-
         });
 
+        //setting next button onclick listener.
         binding.nextButton.setOnClickListener(view -> {
+            //Incrementing current question value,
             currentQuestion = (currentQuestion +1)  %questions.size() ;
+            //Enabling click listener of true and false button;
             binding.trueButton.setEnabled(true);
             binding.falseButton.setEnabled(true);
+            //Calling new Question
             updateQuestion();
-
 
         });
 
     }
 
     @SuppressLint("DefaultLocale")
+    //setting current question of total questions,
     private void updateQuestionCounter() {
         binding.questionOutOf.setText(String.format("Question : %d/%d", currentQuestion, questions.size()));
     }
@@ -88,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @SuppressLint("DefaultLocale")
+    //Checking answer correct or false.
     private void checkAnswer(boolean userChoice) {
 
         boolean answerIs = questions.get(currentQuestion).isAnswerTrue();
@@ -95,27 +102,34 @@ public class MainActivity extends AppCompatActivity {
 
         if(userChoice == answerIs){
             snackMessageId = R.string.correct_answer;
+            //incrementing score +1 for true answer,
             total_score++;
+
+            //Calling animation for wrong answer.
             correctScoreAnimation();
            alphaAnimation();
         }else{
             snackMessageId = R.string.incorrect_answer;
+            //decrementing score -0.5 for false answer,
             if(total_score>0) {
                 total_score = (total_score - 0.5);
             }else{
                 total_score = 0.0;
             }
+            //Calling animation for wrong asnwer.
             wrongScoreAnimation();
            shakeAnimation();
 
-
         }
-
+        //calling the high score
         setHighestScore();
+        //Setting total score,
         binding.totalScoreTextView.setText("Total Score\n"+ total_score);
+        //making snack bar based on answer
         Snackbar.make(binding.cardView,snackMessageId,Snackbar.LENGTH_SHORT).show();
 
     }
+    //Setting animation for question text_view of Incorrect Answer,
     private void shakeAnimation(){
         Animation shake = AnimationUtils.loadAnimation(MainActivity.this, R.anim.shake_animation);
             binding.cardView.setAnimation(shake);
@@ -136,6 +150,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
     }
+    //Setting animation for question text_view of Correct Answer,
     private void alphaAnimation(){
         Animation alpha = AnimationUtils.loadAnimation(MainActivity.this, R.anim.alpha_animation);
         binding.cardView.setAnimation(alpha);
@@ -156,6 +171,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    //Setting animation for score text_view of Correct Answer,
     private void correctScoreAnimation(){
         Animation scoreAnimation = AnimationUtils.loadAnimation(this,R.anim.alpha_score_animation);
         binding.totalScoreTextView.setAnimation(scoreAnimation);
@@ -176,6 +192,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+    //Setting animation for score text_view of Wrong Answer,
     private void wrongScoreAnimation(){
         Animation scoreAnimation = AnimationUtils.loadAnimation(this,R.anim.alpha_score_animation);
         binding.totalScoreTextView.setAnimation(scoreAnimation);
@@ -189,7 +206,6 @@ public class MainActivity extends AppCompatActivity {
             public void onAnimationEnd(Animation animation) {
                 binding.totalScoreTextView.setTextColor(Color.WHITE);
             }
-
             @Override
             public void onAnimationRepeat(Animation animation) {
 
@@ -197,6 +213,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
+    //Setting new High score if the present high score is greater than prev.
     private void setHighestScore(){
         if(total_score > high_score){
             binding.highestScoreTextView.setText(String.format("New Highest Score : %s", total_score));
@@ -206,6 +223,7 @@ public class MainActivity extends AppCompatActivity {
         editor.apply();
         }
     }
+    //Getting new High score if the present high score is greater than prev.
     private void getHighestScore(){
         SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
         high_score = sharedPreferences.getFloat("getScore",0.0f);
@@ -215,7 +233,5 @@ public class MainActivity extends AppCompatActivity {
             binding.highestScoreTextView.setText(String.format("Highest Score : %s", high_score));
         }
     }
-
-
 
 }
