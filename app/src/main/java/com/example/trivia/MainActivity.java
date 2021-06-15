@@ -4,7 +4,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 
 import android.annotation.SuppressLint;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.animation.Animation;
@@ -13,18 +12,21 @@ import android.view.animation.AnimationUtils;
 import com.example.trivia.data.Repository;
 import com.example.trivia.databinding.ActivityMainBinding;
 import com.example.trivia.model.Questions;
+import com.example.trivia.score.HighScore;
+import com.example.trivia.score.Score;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String MESSAGE_ID = "message_prefs";
     private ActivityMainBinding binding;
     private int currentQuestion = 1;
     List<Questions> questions;
-    private double total_score = 0.0;
-    double high_score;
+    private int current_score = 0;
+    private Score score;
+    private HighScore highScore;
+
 
 
     @SuppressLint("DefaultLocale")
@@ -33,15 +35,20 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        score = new Score();
+        highScore = new HighScore(MainActivity.this);
+
+
 
         //Getting our questions and answer from Repository.
     questions = new Repository().getQuestion(questionsArrayList -> {
                 //setting current question to question text_view.
                 binding.questionTextView.setText(questionsArrayList.get(currentQuestion).getAnswer());
+                //Saving the highest score in onCreate
+                binding.highestScoreTextView.setText(String.format("Highest Score : %d", highScore.getHighScore()));
                 //Calling new Question
                 updateQuestionCounter();
-                //Invoking new High Score.
-                getHighestScore();
+
             }
       );
 
@@ -76,8 +83,9 @@ public class MainActivity extends AppCompatActivity {
             //Calling new Question
             updateQuestion();
 
-        });
 
+
+        });
     }
 
     @SuppressLint("DefaultLocale")
@@ -90,7 +98,6 @@ public class MainActivity extends AppCompatActivity {
         String question = questions.get(currentQuestion).getAnswer();
         binding.questionTextView.setText(question);
         updateQuestionCounter();
-
     }
 
     @SuppressLint("DefaultLocale")
@@ -98,33 +105,31 @@ public class MainActivity extends AppCompatActivity {
     private void checkAnswer(boolean userChoice) {
 
         boolean answerIs = questions.get(currentQuestion).isAnswerTrue();
-        int snackMessageId = 0;
+        int snackMessageId ;
 
         if(userChoice == answerIs){
             snackMessageId = R.string.correct_answer;
-            //incrementing score +1 for true answer,
-            total_score++;
-
+            //incrementing score +100 for true answer,
+            addPoint();
             //Calling animation for wrong answer.
             correctScoreAnimation();
-           alphaAnimation();
+            alphaAnimation();
         }else{
             snackMessageId = R.string.incorrect_answer;
-            //decrementing score -0.5 for false answer,
-            if(total_score>0) {
-                total_score = (total_score - 0.5);
-            }else{
-                total_score = 0.0;
-            }
-            //Calling animation for wrong asnwer.
+            //decrementing score -50 for false answer,
+            deductPoint();
+            //Calling animation for wrong answer.
             wrongScoreAnimation();
-           shakeAnimation();
+            shakeAnimation();
 
         }
-        //calling the high score
-        setHighestScore();
+        //saving score ..
+        highScore.savedHighScore(score.getScore());
+        //setting the new high score once it break prev high score
+        binding.highestScoreTextView.setText(String.format("Highest Score : %d", highScore.getHighScore()));
+
         //Setting total score,
-        binding.totalScoreTextView.setText("Total Score\n"+ total_score);
+        binding.totalScoreTextView.setText(String.format("Total Score\n%d", current_score));
         //making snack bar based on answer
         Snackbar.make(binding.cardView,snackMessageId,Snackbar.LENGTH_SHORT).show();
 
@@ -159,12 +164,10 @@ public class MainActivity extends AppCompatActivity {
             public void onAnimationStart(Animation animation) {
                 binding.questionTextView.setTextColor(Color.GREEN);
             }
-
             @Override
             public void onAnimationEnd(Animation animation) {
                 binding.questionTextView.setTextColor(Color.WHITE);
             }
-
             @Override
             public void onAnimationRepeat(Animation animation) {
 
@@ -213,25 +216,24 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
-    //Setting new High score if the present high score is greater than prev.
-    private void setHighestScore(){
-        if(total_score > high_score){
-            binding.highestScoreTextView.setText(String.format("New Highest Score : %s", total_score));
-        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        @SuppressLint("CommitPrefEdits") SharedPreferences.Editor editor = sharedPreferences.edit();
-        editor.putFloat("getScore", (float) total_score);
-        editor.apply();
-        }
+
+    private void addPoint(){
+        current_score += 100;
+        score.setScore(current_score);
     }
-    //Getting new High score if the present high score is greater than prev.
-    private void getHighestScore(){
-        SharedPreferences sharedPreferences = getPreferences(MODE_PRIVATE);
-        high_score = sharedPreferences.getFloat("getScore",0.0f);
-        if(total_score >high_score) {
-            binding.highestScoreTextView.setText(String.format("New Highest Score : %s", high_score));
+    private void deductPoint(){
+        if(current_score >0){
+            current_score -=50;
         }else{
-            binding.highestScoreTextView.setText(String.format("Highest Score : %s", high_score));
+            current_score = 0;
+
         }
+        score.setScore(current_score);
     }
 
+    @Override
+    protected void onPause() {
+        highScore.savedHighScore(score.getScore());
+        super.onPause();
+    }
 }
