@@ -12,7 +12,7 @@ import android.view.animation.AnimationUtils;
 import com.example.trivia.data.Repository;
 import com.example.trivia.databinding.ActivityMainBinding;
 import com.example.trivia.model.Questions;
-import com.example.trivia.score.HighScore;
+import com.example.trivia.score.GameStatAndHighScore;
 import com.example.trivia.score.Score;
 import com.google.android.material.snackbar.Snackbar;
 
@@ -25,8 +25,8 @@ public class MainActivity extends AppCompatActivity {
     List<Questions> questions;
     private int current_score = 0;
     private Score score;
-    private HighScore highScore;
-
+    private int avoidSkipAndDoubleSelect = 0;
+    private GameStatAndHighScore gameStatAndHighScore;
 
 
     @SuppressLint("DefaultLocale")
@@ -36,7 +36,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
         score = new Score();
-        highScore = new HighScore(MainActivity.this);
+
+        //Retrieving game sates
+        gameStatAndHighScore = new GameStatAndHighScore(MainActivity.this);
+        currentQuestion = gameStatAndHighScore.getCurrentQuestion();
+        current_score = gameStatAndHighScore.getCurrentScore();
+        avoidSkipAndDoubleSelect = gameStatAndHighScore.getAvoidSkipAndDoubleSelect();
+
+
 
 
 
@@ -44,8 +51,9 @@ public class MainActivity extends AppCompatActivity {
     questions = new Repository().getQuestion(questionsArrayList -> {
                 //setting current question to question text_view.
                 binding.questionTextView.setText(questionsArrayList.get(currentQuestion).getAnswer());
-                //Saving the highest score in onCreate
-                binding.highestScoreTextView.setText(String.format("Highest Score : %d", highScore.getHighScore()));
+                binding.questionOutOf.setText(String.format("Question : %d/%d", currentQuestion, questions.size()));
+                binding.highestScoreTextView.setText(String.format("Highest Score : %d", gameStatAndHighScore.getHighScore()));
+                binding.totalScoreTextView.setText(String.format("Current Score\n%d", current_score));
                 //Calling new Question
                 updateQuestionCounter();
 
@@ -56,9 +64,7 @@ public class MainActivity extends AppCompatActivity {
         binding.trueButton.setOnClickListener(view -> {
             //Putting user's answer.
             checkAnswer(true);
-            //Disabling click listener of true and false button;
-            binding.trueButton.setEnabled(false);
-            binding.falseButton.setEnabled(false);
+
             updateQuestion();
 
         });
@@ -66,9 +72,7 @@ public class MainActivity extends AppCompatActivity {
         binding.falseButton.setOnClickListener(view -> {
             //Putting user's answer.
             checkAnswer(false);
-            //Disabling click listener of true and false button;
-            binding.trueButton.setEnabled(false);
-            binding.falseButton.setEnabled(false);
+
             updateQuestion();
 
         });
@@ -76,12 +80,23 @@ public class MainActivity extends AppCompatActivity {
         //setting next button onclick listener.
         binding.nextButton.setOnClickListener(view -> {
             //Incrementing current question value,
-            currentQuestion = (currentQuestion +1)  %questions.size() ;
-            //Enabling click listener of true and false button;
-            binding.trueButton.setEnabled(true);
-            binding.falseButton.setEnabled(true);
-            //Calling new Question
-            updateQuestion();
+            if(avoidSkipAndDoubleSelect == 1){
+                avoidSkipAndDoubleSelect--;
+
+                currentQuestion = (currentQuestion +1)  %questions.size() ;
+                //Enabling click listener of true and false button;
+                binding.trueButton.setEnabled(true);
+                binding.falseButton.setEnabled(true);
+                //Calling new Question
+                updateQuestion();
+            }else {
+                Snackbar.make(binding.falseButton,"Please Select Your Answer",Snackbar.LENGTH_SHORT).show();
+                avoidSkipAndDoubleSelect = 0;
+
+            }
+
+            gameStatAndHighScore.saveAvoidSkipAndDoubleSelect(avoidSkipAndDoubleSelect);
+            
 
 
 
@@ -94,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
         binding.questionOutOf.setText(String.format("Question : %d/%d", currentQuestion, questions.size()));
     }
 
+    //updating new question
     private void updateQuestion() {
         String question = questions.get(currentQuestion).getAnswer();
         binding.questionTextView.setText(question);
@@ -104,6 +120,8 @@ public class MainActivity extends AppCompatActivity {
     //Checking answer correct or false.
     private void checkAnswer(boolean userChoice) {
 
+        if(avoidSkipAndDoubleSelect == 0){
+            avoidSkipAndDoubleSelect++;
         boolean answerIs = questions.get(currentQuestion).isAnswerTrue();
         int snackMessageId ;
 
@@ -123,15 +141,29 @@ public class MainActivity extends AppCompatActivity {
             shakeAnimation();
 
         }
-        //saving score ..
-        highScore.savedHighScore(score.getScore());
+
+
+        //saving game states
+        gameStatAndHighScore.savedHighScore(score.getScore());
+        gameStatAndHighScore.saveCurrentQuestion(currentQuestion);
+        gameStatAndHighScore.saveCurrentScore(current_score);
         //setting the new high score once it break prev high score
-        binding.highestScoreTextView.setText(String.format("Highest Score : %d", highScore.getHighScore()));
+            binding.highestScoreTextView.setText(String.format("Highest Score : %d", gameStatAndHighScore.getHighScore()));
+       
 
         //Setting total score,
-        binding.totalScoreTextView.setText(String.format("Total Score\n%d", current_score));
+        binding.totalScoreTextView.setText(String.format("Current Score\n%d", current_score));
         //making snack bar based on answer
         Snackbar.make(binding.cardView,snackMessageId,Snackbar.LENGTH_SHORT).show();
+
+        }else {
+            //It will now allow users to select answer multiple times.
+            //and tells users to go to the next question
+            Snackbar.make(binding.falseButton,"Please Select Next Question",Snackbar.LENGTH_SHORT).show();
+            avoidSkipAndDoubleSelect = 1;
+
+        }
+        gameStatAndHighScore.saveAvoidSkipAndDoubleSelect(avoidSkipAndDoubleSelect);
 
     }
     //Setting animation for question text_view of Incorrect Answer,
@@ -217,10 +249,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //Implemented method to increase score each time for correct answer.
     private void addPoint(){
         current_score += 100;
         score.setScore(current_score);
     }
+    //Implemented logic method to avoid negative score.
+    //and deduct score for wrong answer.
     private void deductPoint(){
         if(current_score >0){
             current_score -=50;
@@ -228,12 +263,17 @@ public class MainActivity extends AppCompatActivity {
             current_score = 0;
 
         }
+        //setting current score
         score.setScore(current_score);
     }
 
+    //Saving SharedPreferences in onPause().
     @Override
     protected void onPause() {
-        highScore.savedHighScore(score.getScore());
+        gameStatAndHighScore.savedHighScore(score.getScore());
+        gameStatAndHighScore.saveCurrentQuestion(currentQuestion);
+        gameStatAndHighScore.saveCurrentScore(current_score);
+        gameStatAndHighScore.saveAvoidSkipAndDoubleSelect(avoidSkipAndDoubleSelect);
         super.onPause();
     }
 }
