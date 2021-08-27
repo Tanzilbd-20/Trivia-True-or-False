@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Trivia</string>
+    <string name="question_out_of">Question : 56/475</string>
+    <string name="question_text">India is smaller than Bangladesh and Bangladesh is bigger than USA.</string>
+    <string name="next_button">Next</string>
+    <string name="false_button">False</string>
+    <string name="true_button">True</string>
+    <string name="correct_answer">Correct</string>
+    <string name="incorrect_answer">Incorrect</string>
+    <string name="score_text">Current Score\n0</string>
+    <string name="highest_score_text">Highest Score : 0</string>
+</resources>

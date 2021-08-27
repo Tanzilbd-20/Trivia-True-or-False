@@ -4,8 +4,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.databinding.DataBindingUtil;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 
@@ -14,6 +16,7 @@ import com.example.trivia.databinding.ActivityMainBinding;
 import com.example.trivia.model.Questions;
 import com.example.trivia.score.GameStatAndHighScore;
 import com.example.trivia.score.Score;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
 import java.util.List;
@@ -27,6 +30,7 @@ public class MainActivity extends AppCompatActivity {
     private Score score;
     private int avoidSkipAndDoubleSelect = 0;
     private GameStatAndHighScore gameStatAndHighScore;
+    private FloatingActionButton share_button;
 
 
     @SuppressLint("DefaultLocale")
@@ -42,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
         currentQuestion = gameStatAndHighScore.getCurrentQuestion();
         current_score = gameStatAndHighScore.getCurrentScore();
         avoidSkipAndDoubleSelect = gameStatAndHighScore.getAvoidSkipAndDoubleSelect();
+        share_button = findViewById(R.id.share_button);
 
 
 
@@ -100,6 +105,18 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+        });
+
+        //Share Button
+        share_button.setOnClickListener(view -> {
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("text/plain");
+            intent.putExtra(Intent.EXTRA_SUBJECT,"Hi There I'm playing this wonderful Trivia game");
+            intent.putExtra(Intent.EXTRA_TEXT,"I'm playing this wonderful game and having fun with it , This is my current score "
+                    +gameStatAndHighScore.getCurrentScore()+", And this is my highest score ever "
+                    +gameStatAndHighScore.getHighScore()+
+                    "\nCome play and beat me.\nLet's play this game have and and gain general knowledge");
+            startActivity(intent);
         });
     }
 
@@ -166,6 +183,7 @@ public class MainActivity extends AppCompatActivity {
         gameStatAndHighScore.saveAvoidSkipAndDoubleSelect(avoidSkipAndDoubleSelect);
 
     }
+
     //Setting animation for question text_view of Incorrect Answer,
     private void shakeAnimation(){
         Animation shake = AnimationUtils.loadAnimation(MainActivity.this, R.anim.shake_animation);
